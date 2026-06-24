@@ -2,10 +2,18 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from deep_translator import GoogleTranslator
 import os
+import asyncio
 
 TOKEN = os.getenv("TOKEN")
 
 TARGET_LANG = "it"
+
+async def translate_text(text):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None,
+        lambda: GoogleTranslator(source='auto', target=TARGET_LANG).translate(text)
+    )
 
 async def translate_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -14,17 +22,14 @@ async def translate_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg:
         return
 
-    # ✅ prende testo O caption (foto/video)
-    text = msg.text if msg.text else msg.caption
+    # ✅ testo o caption
+    text = msg.text or msg.caption
 
     if not text:
         return
 
     try:
-        translated = GoogleTranslator(
-            source='auto',
-            target=TARGET_LANG
-        ).translate(text)
+        translated = await translate_text(text)
 
         await msg.reply_text(translated)
 
@@ -34,8 +39,8 @@ async def translate_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-# ✅ IMPORTANTISSIMO → intercetta tutto
+# ✅ gestisce tutto
 app.add_handler(MessageHandler(filters.ALL, translate_all))
 
-print("✅ Bot completo attivo")
+print("✅ Bot ultra veloce attivo")
 app.run_polling()
