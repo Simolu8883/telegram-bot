@@ -1,4 +1,3 @@
-
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from deep_translator import GoogleTranslator
@@ -11,32 +10,24 @@ if not TOKEN:
     raise ValueError("TOKEN mancante!")
 
 # ✅ CONFIG
-TARGET_LANG = "it"   # lingua finale (it, en, fr, de, es...)
-ALLOWED_USER_ID = None  # inserisci il tuo user ID Telegram per limitare
+TARGET_LANG = "it"
+ALLOWED_USER_ID = None  # inserisci il tuo ID se vuoi limitare
 
-# 🔍 funzione principale
 async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    message = update.message
+    msg = update.message
 
-    if not message:
+    # ✅ solo inoltri con testo
+    if not msg or not msg.forward_origin or not msg.text:
         return
 
-    # ✅ SOLO messaggi inoltrati
-    if not message.forward_origin:
-        return
-
-    # ✅ SOLO testo
-    if not message.text:
-        return
-
-    text = message.text
+    text = msg.text
 
     try:
-        detected_lang = detect(text)
+        detected = detect(text)
 
         # ✅ evita traduzione inutile
-        if detected_lang == TARGET_LANG:
+        if detected == TARGET_LANG:
             return
 
         translated = GoogleTranslator(
@@ -44,18 +35,15 @@ async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE
             target=TARGET_LANG
         ).translate(text)
 
-        # ✅ formato migliorato
-        reply = f"📩 Originale:\n{text}\n\n🌐 Traduzione:\n{translated}"
-
-        await message.reply_text(reply)
+        # ✅ SOLO traduzione (pulito)
+        await msg.reply_text(translated)
 
     except Exception as e:
         print(f"Errore: {e}")
 
 
-# ✅ avvio bot
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), translate_forwarded))
 
-print("✅ Bot PRO avviato")
+print("✅ Bot pulito attivo")
 app.run_polling()
