@@ -23,7 +23,7 @@ async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not msg:
         return
 
-    # ✅ SOLO inoltri
+    # ✅ SOLO inoltri (metodo stabile)
     if not msg.forward_date:
         return
 
@@ -33,14 +33,21 @@ async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE
         return
 
     try:
-        # ✅ detect lingua
-        lang = detect(text)
+        # ✅ prova a rilevare lingua
+        try:
+            lang = detect(text)
+        except:
+            lang = "unknown"
 
-        # ✅ IGNORA italiano
-        if lang == "it":
+        # ✅ IGNORA SOLO italiano (robusto)
+        if lang.startswith("it"):
             return
 
         translated = await translate_text(text)
+
+        # ✅ evita doppioni (fallback sicurezza)
+        if translated.strip().lower() == text.strip().lower():
+            return
 
         await msg.reply_text(translated)
 
@@ -50,8 +57,7 @@ async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-# ✅ filtro più preciso (no filters.ALL)
 app.add_handler(MessageHandler(filters.TEXT | filters.Caption(True), translate_forwarded))
 
-print("✅ Bot versione finale attivo")
+print("✅ Bot finale stabile attivo")
 app.run_polling()
