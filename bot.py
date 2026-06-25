@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from deep_translator import GoogleTranslator
+from langdetect import detect
 import os
 import asyncio
 
@@ -15,20 +16,30 @@ async def translate_text(text):
         lambda: GoogleTranslator(source='auto', target=TARGET_LANG).translate(text)
     )
 
-async def translate_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def translate_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = update.message
 
     if not msg:
         return
 
+    # ✅ SOLO inoltri
+    if not msg.forward_date:
+        return
+
     # ✅ testo o caption
     text = msg.text or msg.caption
-
     if not text:
         return
 
     try:
+        # ✅ detect lingua
+        lang = detect(text)
+
+        # ✅ IGNORA italiano
+        if lang == "it":
+            return
+
         translated = await translate_text(text)
 
         await msg.reply_text(translated)
@@ -39,8 +50,8 @@ async def translate_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-# ✅ gestisce tutto
-app.add_handler(MessageHandler(filters.ALL, translate_all))
+# ✅ filtro più preciso (no filters.ALL)
+app.add_handler(MessageHandler(filters.TEXT | filters.Caption(True), translate_forwarded))
 
-print("✅ Bot ultra veloce attivo")
+print("✅ Bot versione finale attivo")
 app.run_polling()
